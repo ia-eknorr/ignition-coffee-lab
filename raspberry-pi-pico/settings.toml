@@ -1,0 +1,15 @@
+# WiFi settings:
+WIFI_SSID = "Nacho-WiFi"
+WIFI_PASSWORD = "With3xtraCh33s3"
+
+# MQTT settings:
+MQTT_BROKER = "10.0.0.21"
+MQTT_PORT = "1883"
+MQTT_USERNAME = ""
+MQTT_PASSWORD = ""
+MQTT_TEMP_TOPIC = "coffee/roaster/temperature"
+MQTT_STATUS_TOPIC = "coffee/roaster/status"
+
+# Websocket settings:
+WEBSOCKET_HOST = "0.0.0.0"
+WEBSOCKET_PORT = 8765

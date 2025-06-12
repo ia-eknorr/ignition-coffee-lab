@@ -1,0 +1,26 @@
+# VSCode workspace
+*.code-workspace
+
+# VSCode settings
+.vscode
+
+# DS_Store
+.DS_Store
+
+# .env file
+.env
+
+# Default ignition files
+**/ignition.conf
+**/logback.xml
+
+# Project stuff
+**/projects/conversion-report.txt
+**/projects/.resources
+
+# Ignore any inbuilt theming files as well
+**/modules/com.inductiveautomation.perspective/fonts/Merriweather
+**/modules/com.inductiveautomation.perspective/fonts/NotoSans
+**/modules/com.inductiveautomation.perspective/fonts/Roboto
+**/modules/com.inductiveautomation.perspective/icons
+**.digest.json

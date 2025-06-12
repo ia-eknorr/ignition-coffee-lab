@@ -40,7 +40,7 @@ class LEDController:
             self.led = digitalio.DigitalInOut(board.LED)
             self.led.direction = digitalio.Direction.OUTPUT
             self.led.value = False
-            
+
             self.led_available = True
 
         except Exception as e:

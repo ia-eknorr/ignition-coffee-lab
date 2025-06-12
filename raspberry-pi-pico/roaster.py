@@ -71,7 +71,7 @@ class CoffeeRoasterMonitor:
         """Create a temperature reading dict from celsius temperature"""
         temp_fahrenheit = (temp_celsius * 9/5) + 32
         is_valid = temp_celsius is not None and not math.isnan(temp_celsius) and -50 <= temp_celsius <= 600
-        
+
         return {
             "temp_celsius": temp_celsius,
             "temp_fahrenheit": temp_fahrenheit,
@@ -229,7 +229,7 @@ class RoasterController:
                     self.logger.error(f"Too many consecutive errors ({max_errors}). Stopping.")
                     self.led_controller.start_pattern([(0.1, 0.1)])  # Error pattern
                     self.output_strategy.output_status({
-                        "status": "error", 
+                        "status": "error",
                         "reason": "max_errors_reached",
                         "error_count": error_count
                     })

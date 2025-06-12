@@ -9,14 +9,14 @@ from roaster import RoasterController
 
 # Configuration
 OUTPUT_MODE = "websocket"    # Options: "console", "mqtt", "websocket"
-READ_INTERVAL = 1.0  		# Seconds between readings
+READ_INTERVAL = 1.0     # Seconds between readings
 PREFERRED_TEMP_UNIT = "F"   # Temperature unit for single-unit strategies: "C" or "F"
                             # Note: Console and MQTT strategies send both units regardless
 DEBUG_MODE = False
 
 # LED Status Indicators:
 # - Short-Short-Pause pattern: Initializing/connecting (starts immediately)
-# - Three blinks + 3s solid: Successfully connected  
+# - Three blinks + 3s solid: Successfully connected
 # - Single blink: Data sent
 # - Fast blinking: Error/problem
 # - Use Ctrl+C to stop the program gracefully

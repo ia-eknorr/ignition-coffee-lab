@@ -7,7 +7,7 @@ from roast_monitor.controller import RoastController
 
 
 # Configuration
-OUTPUT_MODE = "artisan"     # Options: "console", "mqtt", "artisan"
+OUTPUT_MODE = "mqtt"        # Options: "console", "mqtt", "artisan"
 READ_INTERVAL = 1.0         # Seconds between readings
 PREFERRED_TEMP_UNIT = "F"   # Temperature unit for single-unit outputs: "C" or "F"
 DEBUG_MODE = True

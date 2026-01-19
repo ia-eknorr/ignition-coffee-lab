@@ -1,0 +1,8 @@
+{
+  "charset": "UTF_8",
+  "jsonPayload": false,
+  "numbersAsFloats": false,
+  "qos1": false,
+  "subscription": "icl/#",
+  "writableTags": false
+}

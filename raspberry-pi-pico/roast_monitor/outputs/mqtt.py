@@ -26,14 +26,15 @@ class MQTTOutput(Output):
             self.username = getenv("MQTT_USERNAME")
             self.password = getenv("MQTT_PASSWORD")
             
-            self.temp_topic = getenv("MQTT_TEMP_TOPIC", "icl/roast_monitor/pico01/temperature")
-            self.status_topic = getenv("MQTT_STATUS_TOPIC", "icl/roast_monitor/pico01/status")
-            
+            # Base topic for all device data (individual values published as sub-topics)
+            self.base_topic = getenv("MQTT_BASE_TOPIC", "icl/roast_monitor/pico01")
+            self.status_topic = getenv("MQTT_STATUS_TOPIC", f"{self.base_topic}/status")
+
             if not self.broker:
                 raise RuntimeError("MQTT broker missing from settings.toml")
-                
+
             self.logger.info(f"MQTT config loaded - Broker: {self.broker}:{self.port}")
-            self.debug("info", f"MQTT topics - Temp: {self.temp_topic}, Status: {self.status_topic}")
+            self.debug("info", f"MQTT base topic: {self.base_topic}")
             self.debug("info", f"MQTT auth: {'Enabled' if self.username else 'Disabled'}")
             
         except Exception as e:
@@ -98,36 +99,40 @@ class MQTTOutput(Output):
         self.logger.warning(f"🔌 MQTT disconnected (code: {rc})")
         self.debug("warning", f"MQTT disconnect details - Client: {client}, RC: {rc}")
     
-    def _format_reading(self, reading: dict) -> str:
-        data = {
-            "temperature_c": round(reading["temp_celsius"], 2) if reading["is_valid"] else None,
-            "temperature_f": round(reading["temp_fahrenheit"], 2) if reading["is_valid"] else None,
-            "timestamp": reading["timestamp"],
-            "device_id": "pico01",  # ICL device identifier
-            "status": "good" if reading["is_valid"] else "sensor_error",
-            "is_valid": reading["is_valid"]
-        }
-        return json.dumps(data)
-    
     def output_reading(self, reading: dict) -> bool:
+        """Publish temperature reading as individual topics for clean Ignition tags."""
         if not self.mqtt_client:
             self.debug("error", "MQTT client not available for publish")
             return False
-        
+
         try:
             self.mqtt_client.loop()
-            json_data = self._format_reading(reading)
-            
-            self.debug("info", f"Publishing to topic: {self.temp_topic}")
-            self.debug("info", f"Raw JSON payload: {json_data}")
-            
-            self.mqtt_client.publish(self.temp_topic, json_data)
+
+            # Publish individual values to separate topics
+            is_valid = reading["is_valid"]
+            topics = {
+                "temperature_c": round(reading["temp_celsius"], 2) if is_valid else None,
+                "temperature_f": round(reading["temp_fahrenheit"], 2) if is_valid else None,
+                "is_valid": is_valid,
+                "quality": "good" if is_valid else "sensor_error",
+            }
+
+            for name, value in topics.items():
+                topic = f"{self.base_topic}/{name}"
+                # Convert Python types to MQTT-friendly strings
+                if isinstance(value, bool):
+                    payload = "true" if value else "false"
+                elif value is None:
+                    payload = ""
+                else:
+                    payload = str(value)
+                self.mqtt_client.publish(topic, payload)
+                self.debug("info", f"Published {topic} = {payload}")
+
             self.message_count += 1
-            
-            # Regular output (not debug)
-            temp_str = f"{reading['temp_celsius']:.1f}°C ({reading['temp_fahrenheit']:.1f}°F)" if reading["is_valid"] else "INVALID"
-            self.logger.info(f"📡 MQTT #{self.message_count}: Sent {temp_str}")
-            
+            temp_str = f"{reading['temp_celsius']:.1f}°C ({reading['temp_fahrenheit']:.1f}°F)" if is_valid else "INVALID"
+            self.logger.info(f"📡 MQTT #{self.message_count}: {temp_str}")
+
             return True
         except Exception as e:
             self.logger.error(f"MQTT publish error: {e}")

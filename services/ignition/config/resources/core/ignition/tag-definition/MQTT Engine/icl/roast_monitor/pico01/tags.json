@@ -1,0 +1,38 @@
+[
+  {
+    "usr": {
+      "readOnly": true,
+      "dataType": "String",
+      "enabled": true
+    },
+    "name": "quality",
+    "tagType": "AtomicTag"
+  },
+  {
+    "usr": {
+      "readOnly": true,
+      "dataType": "String",
+      "enabled": true
+    },
+    "name": "temperature_c",
+    "tagType": "AtomicTag"
+  },
+  {
+    "usr": {
+      "readOnly": true,
+      "dataType": "String",
+      "enabled": true
+    },
+    "name": "is_valid",
+    "tagType": "AtomicTag"
+  },
+  {
+    "usr": {
+      "readOnly": true,
+      "dataType": "String",
+      "enabled": true
+    },
+    "name": "temperature_f",
+    "tagType": "AtomicTag"
+  }
+]

@@ -1,0 +1,121 @@
+---
+x-ignition-common: &ignition-common
+  image: &ignition-image inductiveautomation/ignition:8.3.2
+  depends_on:
+    db:
+      condition: service_healthy
+    bootstrap:
+      condition: service_completed_successfully
+  networks:
+    proxy: {}
+
+x-ignition-environment: &ignition-environment
+  ACCEPT_IGNITION_EULA: "Y"
+  IGNITION_EDITION: standard
+  TZ: ${TZ}
+
+x-emqx-environment: &emqx-environment
+  EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
+  EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-public}
+  EMQX_ALLOW_ANONYMOUS: "true"
+
+services:
+  bootstrap:
+    image: *ignition-image
+    user: root
+    entrypoint: ["/bin/bash", "/docker-bootstrap.sh"]
+    environment:
+      GATEWAY_NAME: ${GATEWAY_NAME}
+    volumes:
+      - ignition-data:/data
+      - ./scripts/docker-bootstrap.sh:/docker-bootstrap.sh
+
+  gateway:
+    <<: [*ignition-common]
+    container_name: ${GATEWAY_NAME}
+    hostname: ${GATEWAY_NAME}
+    volumes:
+      - ignition-data:/usr/local/bin/ignition/data
+      - ./services/ignition/projects:/usr/local/bin/ignition/data/projects
+      - ./services/ignition/config/resources/core:/usr/local/bin/ignition/data/config/resources/core
+      - ./services/ignition/config/resources/dev:/usr/local/bin/ignition/data/config/resources/dev
+      # Modules
+      - ./shared/modules/MQTT-Engine-signed-5.0.1.modl:/usr/local/bin/ignition/user-lib/modules/MQTT-Engine-signed.modl
+    environment:
+      <<: *ignition-environment
+      GATEWAY_MODULES_ENABLED: perspective,tag-historian,web-developer,opc-ua,reporting,alarm-notification,com.inductiveautomation.eventstream,com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_LICENSES: com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_CERTS: com.cirruslink.mqtt.engine.gateway
+    labels:
+      - traefik.hostname=${GATEWAY_NAME}
+      - traefik.enable=true
+    command: >
+      -n ${GATEWAY_NAME}
+      -m 4096
+      -h 80
+      -s 443
+      -a ${GATEWAY_NAME}.localtest.me
+      --
+      gateway.useProxyForwardedHeader=true
+      -Dignition.config.mode=${DEPLOYMENT_MODE:-dev}
+
+  db:
+    image: postgres:18.1
+    hostname: db-${GATEWAY_NAME}
+    container_name: db-${GATEWAY_NAME}
+    volumes:
+      - ./services/db/init:/docker-entrypoint-initdb.d
+    environment:
+      TZ: ${TZ}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "ignition"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+    networks:
+      proxy:
+        aliases:
+          - db-${GATEWAY_NAME}
+
+  mqtt:
+    image: emqx/emqx:5.8
+    container_name: mqtt-${GATEWAY_NAME}
+    hostname: mqtt
+    environment:
+      <<: *emqx-environment
+      TZ: ${TZ}
+    ports:
+      # MQTT TCP - exposed on host for Pico W access
+      - "1883:1883"
+      # MQTT WebSocket - for browser clients
+      - "8083:8083"
+      # Dashboard - accessible via Traefik or direct
+      - "18083:18083"
+    volumes:
+      - emqx-data:/opt/emqx/data
+      - emqx-log:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mqtt-dashboard.rule=Host(`mqtt.localtest.me`)
+      - traefik.http.routers.mqtt-dashboard.entrypoints=web
+      - traefik.http.services.mqtt-dashboard.loadbalancer.server.port=18083
+    networks:
+      proxy:
+        aliases:
+          - mqtt
+
+volumes:
+  ignition-data:
+  emqx-data:
+  emqx-log:
+
+networks:
+  proxy:
+    external: true

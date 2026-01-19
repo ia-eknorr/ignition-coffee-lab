@@ -1,15 +1,31 @@
 # WiFi settings:
 WIFI_SSID = "Nacho-WiFi"
 WIFI_PASSWORD = "With3xtraCh33s3"
+# settings.toml - ICL Roast Monitor Configuration
 
-# MQTT settings:
+# ═══════════════════════════════════════════════════════════════════
+#                     IGNITION COFFEE LAB
+#                      Roast Monitor v1.0
+# ═══════════════════════════════════════════════════════════════════
+
+# WiFi Configuration
+# ─────────────────────────────────────────────────────────────────────
+WIFI_SSID = "Nacho-WiFi"
+WIFI_PASSWORD = "With3xtraCh33s3"
+
+# MQTT Configuration (for ICL system integration)
+# ─────────────────────────────────────────────────────────────────────
 MQTT_BROKER = "10.0.0.21"
 MQTT_PORT = "1883"
 MQTT_USERNAME = ""
 MQTT_PASSWORD = ""
-MQTT_TEMP_TOPIC = "coffee/roaster/temperature"
-MQTT_STATUS_TOPIC = "coffee/roaster/status"
+# Topic structure: icl/roast_monitor/[device_id]/[data_type]
+MQTT_TEMP_TOPIC = "icl/roast_monitor/pico01/temperature"
+MQTT_STATUS_TOPIC = "icl/roast_monitor/pico01/status"
 
-# Websocket settings:
+# Artisan Scope Integration (WebSocket Server)
+# ─────────────────────────────────────────────────────────────────────
+# Connect Artisan to: ws://[pico_ip]:8765
+# Configure BT (Bean Temperature) as input1 in Artisan
 WEBSOCKET_HOST = "0.0.0.0"
 WEBSOCKET_PORT = 8765

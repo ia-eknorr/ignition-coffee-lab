@@ -1,65 +1,76 @@
-# main.py - Main execution script for Coffee Roaster Temperature Monitor
+# main.py - ICL Roast Monitor
 
 import adafruit_logging
 
-# Local imports
-from output_strategies import ConsoleOutputStrategy, MQTTOutputStrategy, WebSocketOutputStrategy
-from roaster import RoasterController
+from roast_monitor.outputs import ConsoleOutput, MQTTOutput, ArtisanOutput
+from roast_monitor.controller import RoastController
 
 
 # Configuration
-OUTPUT_MODE = "websocket"    # Options: "console", "mqtt", "websocket"
-READ_INTERVAL = 1.0     # Seconds between readings
-PREFERRED_TEMP_UNIT = "F"   # Temperature unit for single-unit strategies: "C" or "F"
-                            # Note: Console and MQTT strategies send both units regardless
-DEBUG_MODE = False
+OUTPUT_MODE = "artisan"     # Options: "console", "mqtt", "artisan"
+READ_INTERVAL = 1.0         # Seconds between readings
+PREFERRED_TEMP_UNIT = "F"   # Temperature unit for single-unit outputs: "C" or "F"
+DEBUG_MODE = True
 
 # LED Status Indicators:
-# - Short-Short-Pause pattern: Initializing/connecting (starts immediately)
-# - Three blinks + 3s solid: Successfully connected
-# - Single blink: Data sent
-# - Fast blinking: Error/problem
-# - Use Ctrl+C to stop the program gracefully
+# - Short-Short-Pause pattern: Initializing/connecting
+# - Three blinks + 3s solid: Successfully connected  
+# - Single blink: Data sent successfully
+# - Fast blinking: Error/connection problem
+# - Use Ctrl+C to stop gracefully
 
-if __name__ == "__main__":
-    print("Ignition Coffee Lab Temperature Monitor")
-    print("======================================================")
+def main():
+    print("╔══════════════════════════════════════════════════════╗")
+    print("║              IGNITION COFFEE LAB                     ║")
+    print("║                 Roast Monitor v1.0                   ║")
+    print("╚══════════════════════════════════════════════════════╝")
+    print()
 
-    # Set up clean logging
-    logger = adafruit_logging.getLogger("CoffeeRoaster")
+    # Set up logging
+    logger = adafruit_logging.getLogger("ICL-RoastMonitor")
     logger.setLevel(adafruit_logging.INFO)
 
     handler = adafruit_logging.StreamHandler()
     formatter = adafruit_logging.Formatter("%(levelname)s: %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-    # Remove the default handler to avoid duplicate messages
-    logger.handlers = [handler]
+    logger.handlers = [handler]  # Remove default handler
 
     try:
-        if OUTPUT_MODE == "console":
-            strategy = ConsoleOutputStrategy(logger, debug_mode=DEBUG_MODE)
-        elif OUTPUT_MODE == "mqtt":
-            strategy = MQTTOutputStrategy(logger, debug_mode=DEBUG_MODE)
-        elif OUTPUT_MODE == "websocket":
-            strategy = WebSocketOutputStrategy(logger, temp_unit=PREFERRED_TEMP_UNIT, debug_mode=DEBUG_MODE)
-        else:
-            raise ValueError(f"Unknown output mode: {OUTPUT_MODE}")
+        # Initialize output handler
+        output_handlers = {
+            "console": lambda: ConsoleOutput(logger, debug_mode=DEBUG_MODE),
+            "mqtt": lambda: MQTTOutput(logger, debug_mode=DEBUG_MODE),
+            "artisan": lambda: ArtisanOutput(logger, temp_unit=PREFERRED_TEMP_UNIT, debug_mode=DEBUG_MODE)
+        }
+        
+        if OUTPUT_MODE not in output_handlers:
+            raise ValueError(f"Unknown output mode: {OUTPUT_MODE}. Available: {list(output_handlers.keys())}")
+        
+        output_handler = output_handlers[OUTPUT_MODE]()
 
-        controller = RoasterController(
-            output_strategy=strategy,
-            logger=logger
+        # Initialize ICL Roast Controller
+        controller = RoastController(
+            output_handler=output_handler,
+            logger=logger,
+            debug_mode=DEBUG_MODE
         )
 
-        print(f"Using {strategy.__class__.__name__}")
-        if strategy.requires_wifi():
-            print("WiFi credentials loaded from settings.toml")
-        print("LED indicates status - Use Ctrl+C to exit")
-        print("---")
+        print(f"🌡️  Output Mode: {output_handler.__class__.__name__}")
+        if output_handler.requires_wifi():
+            print("📡 WiFi credentials loaded from settings.toml")
+        print("💡 LED indicates status - Use Ctrl+C to exit")
+        print("🔥 Part of Ignition Coffee Lab automation system")
+        print("─" * 54)
 
         controller.run_continuous(read_interval=READ_INTERVAL)
 
+    except KeyboardInterrupt:
+        print("\n🛑 Shutdown requested by user")
     except Exception as e:
-        print(f"Failed to start: {e}")
-        print("Check your configuration and hardware connections")
+        print(f"❌ Failed to start: {e}")
+        print("🔧 Check your configuration and hardware connections")
+
+
+if __name__ == "__main__":
+    main()

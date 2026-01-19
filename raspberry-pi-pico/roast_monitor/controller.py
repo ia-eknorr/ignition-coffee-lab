@@ -12,9 +12,10 @@ from .outputs.base import Output
 class RoastController:
     """Main controller that orchestrates monitor and output handlers"""
 
-    def __init__(self, output_handler: Output, logger):
+    def __init__(self, output_handler: Output, logger, debug_mode=False):
         self.output_handler = output_handler
         self.logger = logger
+        self.debug_mode = debug_mode
         self.monitor = ThermocoupleMonitor(logger)
         self.led_controller = LEDController(logger)
 
@@ -25,7 +26,7 @@ class RoastController:
         self.wifi_manager = None
         if output_handler.requires_wifi():
             try:
-                self.wifi_manager = WiFiManager(logger)
+                self.wifi_manager = WiFiManager(logger, debug_mode=debug_mode)
 
                 # Start continuous blinking during WiFi connection
                 self.led_controller.start_pattern([(0.2, 0.2), (0.2, 0.8)])
@@ -84,7 +85,7 @@ class RoastController:
                     if not self.wifi_manager._check_connection():
                         self.logger.warning("WiFi connection lost, attempting to reconnect...")
                         self.led_controller.start_pattern([(0.1, 0.1)])  # Error pattern
-                        if self.wifi_manager.connect():
+                        if self.wifi_manager.connect(is_reconnect=True):
                             self.logger.info("WiFi reconnected successfully")
                             self.led_controller.stop_pattern()
                         else:

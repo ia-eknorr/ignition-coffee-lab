@@ -12,12 +12,15 @@ import ipaddress
 class WiFiManager:
     """Manages WiFi connection using CircuitPython with settings.toml"""
 
-    def __init__(self, logger):
+    def __init__(self, logger, debug_mode=False):
         self.logger = logger
+        self.debug_mode = debug_mode
         self.is_connected = False
         self.socket_pool = None
         self.max_retries = 5
-        self.retry_delay = 5
+        self.initial_retry_delay = 2  # Faster retries on startup
+        self.reconnect_retry_delay = 5  # Slower retries for reconnection
+        self._radio_warmed_up = False
 
         # Get WiFi credentials from settings.toml
         try:
@@ -35,16 +38,72 @@ class WiFiManager:
             self.logger.error(f"Failed to load WiFi settings: {e}")
             raise
 
-    def connect(self) -> bool:
+    def _warmup_radio(self) -> bool:
+        """
+        Scan for networks to warm up the WiFi radio hardware.
+        This fixes the 'No network with that ssid' error on cold boot.
+        Returns True if target SSID was found.
+        """
+        if self._radio_warmed_up:
+            return True
+
+        self.logger.info("Scanning for networks...")
+        target_found = False
+
+        try:
+            networks = wifi.radio.start_scanning_networks()
+            network_list = []
+
+            for network in networks:
+                network_list.append((network.ssid, network.rssi))
+                if network.ssid == self.ssid:
+                    target_found = True
+
+            wifi.radio.stop_scanning_networks()
+            self._radio_warmed_up = True
+
+            if self.debug_mode and network_list:
+                # Sort by signal strength and show top networks
+                network_list.sort(key=lambda x: x[1], reverse=True)
+                self.logger.info(f"Found {len(network_list)} networks")
+                for ssid, rssi in network_list[:5]:
+                    marker = " <--" if ssid == self.ssid else ""
+                    self.logger.info(f"  {ssid}: {rssi} dBm{marker}")
+
+            if target_found:
+                self.logger.info(f"Target network '{self.ssid}' found")
+            else:
+                self.logger.warning(f"Target network '{self.ssid}' not found in scan")
+
+        except Exception as e:
+            self.logger.warning(f"Network scan failed: {e}")
+            # Still mark as warmed up - the scan attempt itself warms the radio
+            self._radio_warmed_up = True
+
+        return target_found
+
+    def connect(self, is_reconnect=False) -> bool:
+        """
+        Connect to WiFi network.
+        Args:
+            is_reconnect: If True, use slower retry delay (for mid-session reconnects)
+        """
         if self._check_connection():
             self.logger.info("WiFi already connected and working")
             return True
+
+        # Warm up radio on first connection attempt
+        if not self._radio_warmed_up:
+            self._warmup_radio()
+            time.sleep(0.5)  # Brief pause after scan
+
+        retry_delay = self.reconnect_retry_delay if is_reconnect else self.initial_retry_delay
 
         for attempt in range(self.max_retries):
             try:
                 if attempt > 0:
                     self.logger.info(f"WiFi connection attempt {attempt + 1}/{self.max_retries}")
-                    time.sleep(self.retry_delay)
+                    time.sleep(retry_delay)
                 else:
                     self.logger.info(f"Connecting to WiFi: {self.ssid}")
 
@@ -72,8 +131,16 @@ class WiFiManager:
                     return True
                 self.logger.warning(f"Attempt {attempt + 1} failed - no IP address")
 
-            except (ConnectionError, OSError) as e:
-                self.logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+            except ConnectionError as e:
+                error_msg = str(e)
+                if "No network with that ssid" in error_msg:
+                    self.logger.warning(f"Network not visible on attempt {attempt + 1}, rescanning...")
+                    self._radio_warmed_up = False
+                    self._warmup_radio()
+                else:
+                    self.logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+            except OSError as e:
+                self.logger.warning(f"OS error on attempt {attempt + 1}: {e}")
             except Exception as e:
                 self.logger.warning(f"WiFi connection attempt {attempt + 1} failed: {e}")
 

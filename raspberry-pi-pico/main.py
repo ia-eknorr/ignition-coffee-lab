@@ -52,7 +52,8 @@ def main():
         # Initialize ICL Roast Controller
         controller = RoastController(
             output_handler=output_handler,
-            logger=logger
+            logger=logger,
+            debug_mode=DEBUG_MODE
         )
 
         print(f"🌡️  Output Mode: {output_handler.__class__.__name__}")

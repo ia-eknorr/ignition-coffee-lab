@@ -14,6 +14,20 @@ x-ignition-environment: &ignition-environment
   IGNITION_EDITION: standard
   TZ: ${TZ}
 
+x-emqx-environment: &emqx-environment
+  EMQX_NAME: emqx
+  EMQX_HOST: 127.0.0.1
+  # Dashboard admin credentials
+  EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
+  EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-public}
+  # Allow anonymous connections for dev
+  EMQX_ALLOW_ANONYMOUS: "true"
+  EMQX_LISTENERS__TCP__DEFAULT__ENABLE: "true"
+  EMQX_LISTENERS__WS__DEFAULT__ENABLE: "true"
+  # File-based ACL authorization
+  EMQX_AUTHORIZATION__NO_MATCH: allow
+  EMQX_AUTHORIZATION__SOURCES: "[{type=file,enable=true,path=\"/opt/emqx/etc/acl.conf\"}]"
+
 services:
   bootstrap:
     image: *ignition-image
@@ -69,8 +83,43 @@ services:
         aliases:
           - db-${GATEWAY_NAME}
 
+  mqtt:
+    image: emqx/emqx:5.8
+    container_name: mqtt-${GATEWAY_NAME}
+    hostname: mqtt
+    environment:
+      <<: *emqx-environment
+      TZ: ${TZ}
+    ports:
+      # MQTT TCP - exposed on host for Pico W access
+      - "1883:1883"
+      # MQTT WebSocket - for browser clients
+      - "8083:8083"
+      # Dashboard - accessible via Traefik or direct
+      - "18083:18083"
+    volumes:
+      - emqx-data:/opt/emqx/data
+      - emqx-log:/opt/emqx/log
+      - ./services/mqtt/acl.conf:/opt/emqx/etc/acl.conf:ro
+    healthcheck:
+      test: ["CMD", "emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mqtt-dashboard.rule=Host(`mqtt.localtest.me`)
+      - traefik.http.routers.mqtt-dashboard.entrypoints=web
+      - traefik.http.services.mqtt-dashboard.loadbalancer.server.port=18083
+    networks:
+      proxy:
+        aliases:
+          - mqtt
+
 volumes:
   ignition-data:
+  emqx-data:
+  emqx-log:
 
 networks:
   proxy:

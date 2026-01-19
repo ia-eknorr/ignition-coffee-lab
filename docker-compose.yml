@@ -15,18 +15,9 @@ x-ignition-environment: &ignition-environment
   TZ: ${TZ}
 
 x-emqx-environment: &emqx-environment
-  EMQX_NAME: emqx
-  EMQX_HOST: 127.0.0.1
-  # Dashboard admin credentials
   EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
   EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-public}
-  # Allow anonymous connections for dev
   EMQX_ALLOW_ANONYMOUS: "true"
-  EMQX_LISTENERS__TCP__DEFAULT__ENABLE: "true"
-  EMQX_LISTENERS__WS__DEFAULT__ENABLE: "true"
-  # File-based ACL authorization
-  EMQX_AUTHORIZATION__NO_MATCH: allow
-  EMQX_AUTHORIZATION__SOURCES: "[{type=file,enable=true,path=\"/opt/emqx/etc/acl.conf\"}]"
 
 services:
   bootstrap:
@@ -48,8 +39,13 @@ services:
       - ./services/ignition/projects:/usr/local/bin/ignition/data/projects
       - ./services/ignition/config/resources/core:/usr/local/bin/ignition/data/config/resources/core
       - ./services/ignition/config/resources/dev:/usr/local/bin/ignition/data/config/resources/dev
+      # Modules
+      - ./shared/modules/MQTT-Engine-signed-5.0.1.modl:/usr/local/bin/ignition/user-lib/modules/MQTT-Engine-signed.modl
     environment:
       <<: *ignition-environment
+      GATEWAY_MODULES_ENABLED: perspective,tag-historian,web-developer,opc-ua,reporting,alarm-notification,com.inductiveautomation.eventstream,com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_LICENSES: com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_CERTS: com.cirruslink.mqtt.engine.gateway
     labels:
       - traefik.hostname=${GATEWAY_NAME}
       - traefik.enable=true
@@ -100,7 +96,6 @@ services:
     volumes:
       - emqx-data:/opt/emqx/data
       - emqx-log:/opt/emqx/log
-      - ./services/mqtt/acl.conf:/opt/emqx/etc/acl.conf:ro
     healthcheck:
       test: ["CMD", "emqx", "ctl", "status"]
       interval: 10s

@@ -20,13 +20,12 @@ WIFI_PASSWORD = "YourPassword"
 # ─────────────────────────────────────────────────────────────────────
 # Set MQTT_BROKER to the IP address of your Docker host running EMQX
 # Find your host IP: hostname -I (Linux) or ipconfig getifaddr en0 (macOS)
-MQTT_BROKER = "10.0.0.21"
+MQTT_BROKER = "10.20.0.234"
 MQTT_PORT = "1883"
 MQTT_USERNAME = ""
 MQTT_PASSWORD = ""
-# Topic structure: icl/roast_monitor/[device_id]/[data_type]
-MQTT_TEMP_TOPIC = "icl/roast_monitor/pico01/temperature"
-MQTT_STATUS_TOPIC = "icl/roast_monitor/pico01/status"
+# Base topic - individual values published as sub-topics (temperature_c, temperature_f, etc.)
+MQTT_BASE_TOPIC = "icl/roast_monitor/pico01"
 
 # Artisan Scope Integration (WebSocket Server)
 # ─────────────────────────────────────────────────────────────────────

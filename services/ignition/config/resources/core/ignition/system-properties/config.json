@@ -37,6 +37,6 @@
   "scheduledBackupsEnabled": false,
   "scriptMessageEncoding": "Protobuf",
   "secondsBeforeFailover": 60,
-  "systemName": "project-name",
+  "systemName": "ignition-coffee-lab",
   "useCondensedDialogFont": false
 }

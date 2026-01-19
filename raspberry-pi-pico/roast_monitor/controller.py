@@ -28,12 +28,12 @@ class RoastController:
             try:
                 self.wifi_manager = WiFiManager(logger, debug_mode=debug_mode)
 
-                # Start continuous blinking during WiFi connection
-                self.led_controller.start_pattern([(0.2, 0.2), (0.2, 0.8)])
+                # Blink pattern before WiFi connection (sync - no event loop yet)
+                self.led_controller.blink_sync_pattern([(0.2, 0.2), (0.2, 0.8)], count=2)
 
                 if not self.wifi_manager.connect():
-                    # Error pattern: fast blink
-                    self.led_controller.start_pattern([(0.1, 0.1)])
+                    # Error pattern: fast blink (sync)
+                    self.led_controller.blink_sync_pattern([(0.1, 0.1)], count=5)
                     raise RuntimeError("Failed to connect to WiFi after multiple attempts")
 
                 signal = self.wifi_manager.get_signal_strength()
@@ -42,13 +42,13 @@ class RoastController:
 
             except Exception as e:
                 self.logger.error(f"WiFi initialization failed: {e}")
-                self.led_controller.start_pattern([(0.1, 0.1)])  # Error pattern
+                self.led_controller.blink_sync_pattern([(0.1, 0.1)], count=5)  # Error pattern
                 raise RuntimeError(f"WiFi setup failed: {e}")
 
-        # Initialize output handler with LED indication
-        self.led_controller.start_pattern([(0.2, 0.2), (0.2, 0.8)])
+        # Blink before output handler init (sync - no event loop yet)
+        self.led_controller.blink_sync_pattern([(0.2, 0.2), (0.2, 0.8)], count=2)
         if not self.output_handler.initialize(self.wifi_manager):
-            self.led_controller.start_pattern([(0.1, 0.1)])  # Error pattern
+            self.led_controller.blink_sync_pattern([(0.1, 0.1)], count=5)  # Error pattern
             raise RuntimeError("Failed to initialize output handler")
 
         # Success! Three blinks then solid for 3 seconds

@@ -38,6 +38,22 @@ class WiFiManager:
             self.logger.error(f"Failed to load WiFi settings: {e}")
             raise
 
+    def _reset_radio(self):
+        """Reset WiFi radio to clear any bad state"""
+        try:
+            wifi.radio.stop_scanning_networks()
+        except Exception:
+            pass
+        try:
+            wifi.radio.stop_station()
+        except Exception:
+            pass
+        # Toggle radio off/on to fully reset
+        wifi.radio.enabled = False
+        time.sleep(0.5)
+        wifi.radio.enabled = True
+        time.sleep(0.5)
+
     def _warmup_radio(self) -> bool:
         """
         Scan for networks to warm up the WiFi radio hardware.
@@ -51,10 +67,17 @@ class WiFiManager:
         target_found = False
 
         try:
+            # Reset radio first to clear any stale state
+            self._reset_radio()
+
             networks = wifi.radio.start_scanning_networks()
             network_list = []
 
-            for network in networks:
+            # Limit iterations to prevent hanging
+            max_networks = 50
+            for i, network in enumerate(networks):
+                if i >= max_networks:
+                    break
                 network_list.append((network.ssid, network.rssi))
                 if network.ssid == self.ssid:
                     target_found = True
@@ -77,6 +100,11 @@ class WiFiManager:
 
         except Exception as e:
             self.logger.warning(f"Network scan failed: {e}")
+            # Try to clean up
+            try:
+                wifi.radio.stop_scanning_networks()
+            except Exception:
+                pass
             # Still mark as warmed up - the scan attempt itself warms the radio
             self._radio_warmed_up = True
 

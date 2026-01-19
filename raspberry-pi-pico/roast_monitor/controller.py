@@ -52,7 +52,6 @@ class RoastController:
             raise RuntimeError("Failed to initialize output handler")
 
         # Success! Three blinks then solid for 3 seconds
-        self.led_controller.stop_pattern()
         for _ in range(3):
             self.led_controller.blink_once(0.2)
             time.sleep(0.2)

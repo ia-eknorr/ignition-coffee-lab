@@ -1,7 +1,6 @@
 # roast_monitor/outputs/console.py - Console output handler
 
 from .base import Output
-from ..utils import WiFiManager
 
 
 class ConsoleOutput(Output):

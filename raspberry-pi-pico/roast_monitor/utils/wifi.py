@@ -117,7 +117,11 @@ class WiFiManager:
             is_reconnect: If True, use slower retry delay (for mid-session reconnects)
         """
         if self._check_connection():
-            self.logger.info("WiFi already connected and working")
+            self.logger.info(f"WiFi already connected - IP: {wifi.radio.ipv4_address}")
+            # Create socket pool if not already created (can happen if WiFi was pre-connected)
+            if self.socket_pool is None:
+                self.socket_pool = socketpool.SocketPool(wifi.radio)
+            self.is_connected = True
             return True
 
         # Warm up radio on first connection attempt
